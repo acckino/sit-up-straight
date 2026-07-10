@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>せすじピン！ - 姿勢リマインダー</title>
+<style>
+  :root {
+    --bg: #f4f9f4;
+    --card: #ffffff;
+    --accent: #4caf7d;
+    --accent-dark: #35855f;
+    --accent-soft: #e3f3ea;
+    --text: #3a4a40;
+    --muted: #7a8a80;
+    --warn: #e8926a;
+    --radius: 18px;
+    --shadow: 0 3px 12px rgba(60, 110, 80, 0.10);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding-bottom: 60px;
+  }
+  .container { max-width: 640px; margin: 0 auto; padding: 0 16px; }
+
+  header {
+    text-align: center;
+    padding: 28px 16px 18px;
+  }
+  header h1 {
+    font-size: 1.7rem;
+    color: var(--accent-dark);
+    letter-spacing: 0.05em;
+  }
+  header p { color: var(--muted); font-size: 0.92rem; margin-top: 4px; }
+
+  /* タブメニュー */
+  .tab-bar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    gap: 10px;
+    padding: 10px 0 14px;
+    background: var(--bg);
+  }
+  .tab-btn {
+    flex: 1;
+    border: 2px solid var(--accent);
+    background: #fff;
+    color: var(--accent-dark);
+    border-radius: 999px;
+    padding: 10px 4px;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .tab-btn.active {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(76, 175, 125, 0.35);
+  }
+  .tab-page { display: none; }
+  .tab-page.active { display: block; }
+
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px;
+    margin-bottom: 18px;
+  }
+  .card h2 {
+    font-size: 1.02rem;
+    color: var(--accent-dark);
+    margin-bottom: 12px;
+  }
+
+  /* シーン選択 */
+  .scenes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 10px;
+  }
+  .scene-btn {
+    border: 2px solid transparent;
+    background: var(--accent-soft);
+    border-radius: 14px;
+    padding: 12px 6px;
+    text-align: center;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.88rem;
+    color: var(--text);
+    transition: all 0.15s;
+  }
+  .scene-btn .emoji { display: block; font-size: 1.7rem; margin-bottom: 4px; }
+  .scene-btn.active {
+    border-color: var(--accent);
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(76, 175, 125, 0.25);
+    font-weight: bold;
+  }
+
+  /* 間隔選択 */
+  .intervals { display: flex; gap: 10px; }
+  .interval-btn {
+    flex: 1;
+    border: 2px solid transparent;
+    background: var(--accent-soft);
+    border-radius: 14px;
+    padding: 12px 4px;
+    font-family: inherit;
+    font-size: 1rem;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .interval-btn.active {
+    border-color: var(--accent);
+    background: #fff;
+    font-weight: bold;
+    box-shadow: 0 2px 8px rgba(76, 175, 125, 0.25);
+  }
+
+  /* タイマー表示 */
+  .timer-area { text-align: center; }
+  #countdown {
+    font-size: 2.6rem;
+    font-weight: bold;
+    color: var(--accent-dark);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+  }
+  #timer-status { color: var(--muted); font-size: 0.9rem; margin-bottom: 14px; }
+  .main-btn {
+    display: inline-block;
+    border: none;
+    border-radius: 999px;
+    padding: 14px 52px;
+    font-size: 1.15rem;
+    font-family: inherit;
+    font-weight: bold;
+    cursor: pointer;
+    color: #fff;
+    background: var(--accent);
+    box-shadow: 0 4px 12px rgba(76, 175, 125, 0.4);
+    transition: all 0.15s;
+  }
+  .main-btn:active { transform: scale(0.97); }
+  .main-btn.stop { background: var(--warn); box-shadow: 0 4px 12px rgba(232, 146, 106, 0.4); }
+  .sub-btn {
+    border: 1px solid var(--accent);
+    background: #fff;
+    color: var(--accent-dark);
+    border-radius: 999px;
+    padding: 8px 20px;
+    font-family: inherit;
+    font-size: 0.88rem;
+    cursor: pointer;
+    margin-top: 12px;
+  }
+
+  /* トグル */
+  .toggles { display: flex; flex-direction: column; gap: 10px; }
+  .toggle-row {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 0.94rem;
+  }
+  .toggle-row .hint { color: var(--muted); font-size: 0.8rem; }
+  .switch { position: relative; width: 48px; height: 27px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; inset: 0; cursor: pointer;
+    background: #ccd8d0; border-radius: 999px; transition: 0.2s;
+  }
+  .slider::before {
+    content: ""; position: absolute; width: 21px; height: 21px;
+    left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: 0.2s;
+  }
+  .switch input:checked + .slider { background: var(--accent); }
+  .switch input:checked + .slider::before { transform: translateX(21px); }
+
+  /* コツ一覧 */
+  #tips-list { list-style: none; }
+  #tips-list li {
+    background: var(--accent-soft);
+    border-radius: 12px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    font-size: 0.92rem;
+  }
+  #tips-list li::before { content: "🌿 "; }
+
+  .note {
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+  .note li { margin-left: 1.2em; margin-bottom: 4px; }
+
+  /* ほぐしタイム */
+  details.stretch {
+    background: var(--accent-soft);
+    border-radius: 14px;
+    margin-bottom: 10px;
+  }
+  details.stretch summary {
+    cursor: pointer;
+    padding: 12px 16px;
+    font-weight: bold;
+    font-size: 0.95rem;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  details.stretch summary::-webkit-details-marker { display: none; }
+  details.stretch summary::after {
+    content: "▾";
+    margin-left: auto;
+    color: var(--accent-dark);
+    transition: transform 0.2s;
+  }
+  details.stretch[open] summary::after { transform: rotate(180deg); }
+  .stretch-body { padding: 0 16px 14px; }
+  .stretch-body ol {
+    margin-left: 1.5em;
+    font-size: 0.92rem;
+  }
+  .stretch-body ol li { margin-bottom: 7px; }
+  .stretch-point {
+    background: #fff;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    margin-top: 10px;
+  }
+  .stretch-point::before { content: "💡 "; }
+  .stretch-src {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 8px;
+    text-align: right;
+  }
+  .stretch-src a { color: var(--muted); }
+
+  /* リマインド画面（オーバーレイ） */
+  #overlay {
+    position: fixed; inset: 0;
+    background: rgba(53, 133, 95, 0.92);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 100;
+    padding: 20px;
+  }
+  #overlay.show { display: flex; }
+  .overlay-card {
+    background: #fff;
+    border-radius: 24px;
+    padding: 34px 26px;
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+    animation: pop 0.35s ease;
+  }
+  @keyframes pop {
+    0% { transform: scale(0.85); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .overlay-card .big-emoji { font-size: 3.2rem; }
+  .overlay-card h3 { color: var(--accent-dark); font-size: 1.3rem; margin: 8px 0 14px; }
+  .overlay-card .tip {
+    background: var(--accent-soft);
+    border-radius: 14px;
+    padding: 14px;
+    font-size: 1.02rem;
+    margin-bottom: 20px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🌱 せすじピン！</h1>
+  <p>ときどき思い出して、姿勢をすっきり</p>
+</header>
+
+<div class="container">
+
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="tab-reminder">⏰ せすじピン！</button>
+    <button class="tab-btn" data-tab="tab-hogushi">🧘 ほぐしタイム</button>
+  </div>
+
+  <div id="tab-reminder" class="tab-page active">
+
+  <div class="card">
+    <h2>いまのシーンは？</h2>
+    <div class="scenes" id="scenes"></div>
+  </div>
+
+  <div class="card">
+    <h2>お知らせの間隔</h2>
+    <div class="intervals" id="intervals">
+      <button class="interval-btn" data-min="30">30分</button>
+      <button class="interval-btn active" data-min="45">45分</button>
+      <button class="interval-btn" data-min="60">1時間</button>
+    </div>
+  </div>
+
+  <div class="card timer-area">
+    <div id="countdown">--:--</div>
+    <div id="timer-status">スタートを押すとお知らせが始まります</div>
+    <button class="main-btn" id="start-btn">スタート</button>
+    <br>
+    <button class="sub-btn" id="test-btn">お知らせを試してみる</button>
+  </div>
+
+  <div class="card">
+    <h2>設定</h2>
+    <div class="toggles">
+      <div class="toggle-row">
+        <div>通知（ブラウザ）<div class="hint" id="notif-hint">タブが後ろにあってもお知らせします</div></div>
+        <label class="switch"><input type="checkbox" id="notif-toggle"><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div>やさしいチャイム音</div>
+        <label class="switch"><input type="checkbox" id="sound-toggle" checked><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div>画面スリープ防止<div class="hint">スマホで画面が消えないようにします</div></div>
+        <label class="switch"><input type="checkbox" id="wake-toggle"><span class="slider"></span></label>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 id="tips-title">姿勢のコツ</h2>
+    <ul id="tips-list"></ul>
+  </div>
+
+  <div class="card">
+    <h2>スマホで使うときのコツ</h2>
+    <ul class="note">
+      <li>ブラウザでこのページを開いたままにしてください（画面が消えるとタイマーが止まることがあります）。</li>
+      <li>「画面スリープ防止」をオンにすると、画面がついたままになります。</li>
+      <li>iPhoneの場合は「ホーム画面に追加」してから開くと使いやすいです。</li>
+      <li>歩いているときなど画面を見られないときは、チャイム音をオンにしておくと気づきやすいです。</li>
+    </ul>
+  </div>
+
+  </div><!-- /tab-reminder -->
+
+  <div id="tab-hogushi" class="tab-page">
+    <div class="card">
+      <h2>🧘 ストレッチ・マッサージ</h2>
+      <p class="note" style="margin-bottom: 12px;">お知らせのついでに、気になるところをほぐしましょう。タイトルを押すとやり方が開きます。タイマーはこのタブを見ている間も動き続けます。</p>
+      <div id="stretch-list"></div>
+    </div>
+  </div><!-- /tab-hogushi -->
+
+</div>
+
+<!-- リマインド表示 -->
+<div id="overlay">
+  <div class="overlay-card">
+    <div class="big-emoji" id="overlay-emoji">🌱</div>
+    <h3>せすじピン！の時間です</h3>
+    <div class="tip" id="overlay-tip"></div>
+    <button class="main-btn" id="done-btn">しゃんとした！</button>
+  </div>
+</div>
+
+<script>
+const SCENES = {
+  desk: {
+    label: "デスクワーク", emoji: "🖥️",
+    tips: [
+      "椅子に深く腰かけて、骨盤をまっすぐ立てましょう",
+      "あごを軽く引いて、画面は目の高さに近づけましょう",
+      "肩をきゅっとすくめてから、ストンと落として力を抜きましょう",
+      "足の裏をぺたんと床につけましょう",
+      "一度立ち上がって、ぐーっと伸びをするのもおすすめです"
+    ]
+  },
+  meeting: {
+    label: "会議中", emoji: "👥",
+    tips: [
+      "背もたれに寄りかかりすぎず、骨盤を立てて座り直しましょう",
+      "さりげなく肩甲骨を寄せて、胸を開きましょう",
+      "あごを引いて、頭を背骨の真上に乗せるイメージで",
+      "膝の角度は90度くらい、足の裏は床につけましょう",
+      "深呼吸をひとつ。おなかを軽くへこませると背筋が伸びます"
+    ]
+  },
+  meal: {
+    label: "食事中", emoji: "🍚",
+    tips: [
+      "器を持って食べると、前かがみになりにくいです",
+      "テーブルとおなかの間は、こぶし1つ分をキープしましょう",
+      "椅子に深く座って、背筋をすっと伸ばしましょう",
+      "肘をつかずに、両足を床につけて食べましょう",
+      "よく噛むと、自然と姿勢も安定します"
+    ]
+  },
+  walk: {
+    label: "歩くとき", emoji: "🚶",
+    tips: [
+      "頭のてっぺんを糸で吊られているイメージで歩きましょう",
+      "目線を少し遠くへ。スマホは立ち止まって見ましょう",
+      "腕を軽く後ろに振ると、胸が自然に開きます",
+      "かかとから着地して、つま先でやさしく蹴り出しましょう",
+      "おなかを軽く引き上げると、背筋がすっきりします"
+    ]
+  },
+  train: {
+    label: "電車の中", emoji: "🚃",
+    tips: [
+      "浅座りせず、深く腰かけて骨盤を立てましょう",
+      "スマホは少し持ち上げて、目線を下げすぎないように",
+      "足を組まずに、両足を床につけましょう",
+      "あごを引いて、首の後ろを長く保つイメージで",
+      "頭は背もたれに預けず、自分で支えるイメージで座りましょう"
+    ]
+  }
+};
+
+const STRETCHES = [
+  {
+    emoji: "👂",
+    title: "耳のマッサージ（自律神経を整える）",
+    steps: [
+      "耳の上のほうを親指と人差し指でつまみ、斜め上へ3秒引っぱる（3回）",
+      "耳の真ん中をつまみ、横へ3秒引っぱる（3回）",
+      "耳たぶをつまみ、下へ3秒引っぱる（3回）",
+      "耳を横に引っぱりながら、後ろへゆっくり5回まわす",
+      "耳を前にたたんで軽くふたをして、5秒キープ",
+      "耳の上のくぼみにある「神門（しんもん）」のツボを、耳の裏に親指・表に人差し指を当ててやさしく押しもみ、まわりも丁寧にこすってほぐす",
+      "仕上げに手のひらで両耳をおおい、前から後ろへゆっくりまわす"
+    ],
+    point: "痛くない「気持ちいい」くらいの力で。血のめぐりが良いお風呂上がりが効果的で、寝る前に行うと寝つきも良くなります。痛みを感じるところは、丁寧にほぐしてあげましょう。",
+    source: { label: "おいしな歯科コラム「耳マッサージ」より", url: "https://oishinaika.com/column/plusalpha/plusalpha11" }
+  },
+  {
+    emoji: "💪",
+    title: "肩甲骨はがし（肩まわし）",
+    steps: [
+      "両手の指先を、左右の肩にちょこんと乗せる",
+      "肘で大きな円を描くように、後ろへゆっくり10回まわす",
+      "同じように、前へも5回まわす",
+      "最後に肩をきゅっとすくめて、ストンと落とす"
+    ],
+    point: "肘で描く円はできるだけ大きく。肩甲骨が背中の真ん中に寄ったり離れたりするのを感じながらまわすと効果的です。デスクワークで背中が固まったときに。"
+  },
+  {
+    emoji: "🌸",
+    title: "胸ひらきストレッチ（猫背リセット）",
+    steps: [
+      "両手を腰の後ろで組む",
+      "肩甲骨を寄せながら、組んだ手を斜め下へゆっくり引き下げる",
+      "胸を天井へ向けるように開いて、10秒キープ",
+      "ゆっくり戻して、深呼吸をひとつ"
+    ],
+    point: "あごは軽く引いたまま、腰は反らせすぎないように。パソコン作業で丸くなった背中がすっと戻ります。"
+  },
+  {
+    emoji: "🦒",
+    title: "首すじストレッチ（スマホ首の予防）",
+    steps: [
+      "右手を頭の左側にそっと添える",
+      "頭を右へゆっくり倒して、左の首すじを10秒のばす",
+      "反対側も同じように10秒",
+      "最後に両手を頭の後ろに添えて、頭を前にゆっくり倒して10秒"
+    ],
+    point: "手の重みを軽く添えるだけでOK。ぐいぐい押さないのがコツです。肩の力を抜いて、のばしている間はゆっくり呼吸しましょう。"
+  },
+  {
+    emoji: "🌙",
+    title: "座ったまま体側のばし",
+    steps: [
+      "椅子に深く座り、右手をまっすぐ上にあげる",
+      "息を吐きながら、体を左へゆっくり倒す",
+      "右の脇腹がのびるところで10秒キープ",
+      "反対側も同じように"
+    ],
+    point: "お尻が椅子から浮かないように。会議の合間でも、伸びをするふりでさりげなくできます。"
+  },
+  {
+    emoji: "🪑",
+    title: "お尻のストレッチ（腰の重だるさに）",
+    steps: [
+      "椅子に座ったまま、右の足首を左の膝の上に乗せる",
+      "背筋をのばしたまま、股関節から体をゆっくり前へ倒す",
+      "お尻の右側がのびるところで10〜20秒キープ",
+      "反対側も同じように"
+    ],
+    point: "背中を丸めずに、おへそを足に近づけるイメージで倒すのがコツ。長時間座った日の腰の重さがやわらぎます。"
+  }
+];
+
+const stretchListEl = document.getElementById("stretch-list");
+STRETCHES.forEach(st => {
+  const details = document.createElement("details");
+  details.className = "stretch";
+
+  const summary = document.createElement("summary");
+  summary.textContent = `${st.emoji} ${st.title}`;
+  details.appendChild(summary);
+
+  const body = document.createElement("div");
+  body.className = "stretch-body";
+
+  const ol = document.createElement("ol");
+  st.steps.forEach(step => {
+    const li = document.createElement("li");
+    li.textContent = step;
+    ol.appendChild(li);
+  });
+  body.appendChild(ol);
+
+  if (st.point) {
+    const p = document.createElement("div");
+    p.className = "stretch-point";
+    p.textContent = st.point;
+    body.appendChild(p);
+  }
+
+  if (st.source) {
+    const src = document.createElement("div");
+    src.className = "stretch-src";
+    const a = document.createElement("a");
+    a.href = st.source.url;
+    a.target = "_blank";
+    a.rel = "noopener";
+    a.textContent = st.source.label;
+    src.appendChild(a);
+    body.appendChild(src);
+  }
+
+  details.appendChild(body);
+  stretchListEl.appendChild(details);
+});
+
+// --- タブ切り替え ---
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b === btn));
+    document.querySelectorAll(".tab-page").forEach(p => p.classList.toggle("active", p.id === btn.dataset.tab));
+    window.scrollTo({ top: 0 });
+  });
+});
+
+let currentScene = "desk";
+let intervalMin = 45;
+let running = false;
+let nextAt = null;
+let tickTimer = null;
+let wakeLock = null;
+let audioCtx = null;
+const baseTitle = document.title;
+
+// --- シーンボタン生成 ---
+const scenesEl = document.getElementById("scenes");
+for (const [key, s] of Object.entries(SCENES)) {
+  const btn = document.createElement("button");
+  btn.className = "scene-btn" + (key === currentScene ? " active" : "");
+  btn.dataset.scene = key;
+  btn.innerHTML = `<span class="emoji">${s.emoji}</span>${s.label}`;
+  btn.addEventListener("click", () => {
+    currentScene = key;
+    document.querySelectorAll(".scene-btn").forEach(b => b.classList.toggle("active", b === btn));
+    renderTips();
+  });
+  scenesEl.appendChild(btn);
+}
+
+function renderTips() {
+  const s = SCENES[currentScene];
+  document.getElementById("tips-title").textContent = `${s.emoji} ${s.label}の姿勢のコツ`;
+  const ul = document.getElementById("tips-list");
+  ul.innerHTML = "";
+  s.tips.forEach(t => {
+    const li = document.createElement("li");
+    li.textContent = t;
+    ul.appendChild(li);
+  });
+}
+renderTips();
+
+// --- 間隔ボタン ---
+document.querySelectorAll(".interval-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    intervalMin = Number(btn.dataset.min);
+    document.querySelectorAll(".interval-btn").forEach(b => b.classList.toggle("active", b === btn));
+    if (running) {
+      nextAt = Date.now() + intervalMin * 60 * 1000;
+      updateCountdown();
+    }
+  });
+});
+
+// --- タイマー ---
+const startBtn = document.getElementById("start-btn");
+const statusEl = document.getElementById("timer-status");
+const countdownEl = document.getElementById("countdown");
+
+startBtn.addEventListener("click", () => {
+  running ? stopTimer() : startTimer();
+});
+
+function startTimer() {
+  running = true;
+  nextAt = Date.now() + intervalMin * 60 * 1000;
+  startBtn.textContent = "ストップ";
+  startBtn.classList.add("stop");
+  statusEl.textContent = `${intervalMin}分ごとにお知らせします`;
+  tickTimer = setInterval(tick, 1000);
+  updateCountdown();
+}
+
+function stopTimer() {
+  running = false;
+  clearInterval(tickTimer);
+  startBtn.textContent = "スタート";
+  startBtn.classList.remove("stop");
+  statusEl.textContent = "スタートを押すとお知らせが始まります";
+  countdownEl.textContent = "--:--";
+  document.title = baseTitle;
+}
+
+function tick() {
+  if (!running) return;
+  if (Date.now() >= nextAt) {
+    fireReminder();
+    nextAt = Date.now() + intervalMin * 60 * 1000;
+  }
+  updateCountdown();
+}
+
+function updateCountdown() {
+  const remain = Math.max(0, nextAt - Date.now());
+  const m = Math.floor(remain / 60000);
+  const sec = Math.floor((remain % 60000) / 1000);
+  countdownEl.textContent = `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+}
+
+// --- リマインド ---
+function pickTip() {
+  const tips = SCENES[currentScene].tips;
+  return tips[Math.floor(Math.random() * tips.length)];
+}
+
+function fireReminder() {
+  const s = SCENES[currentScene];
+  const tip = pickTip();
+
+  document.getElementById("overlay-emoji").textContent = s.emoji;
+  document.getElementById("overlay-tip").textContent = tip;
+  document.getElementById("overlay").classList.add("show");
+
+  if (document.getElementById("sound-toggle").checked) playChime();
+
+  if (document.getElementById("notif-toggle").checked && "Notification" in window && Notification.permission === "granted") {
+    try {
+      new Notification("🌱 せすじピン！の時間です", { body: `${s.emoji} ${tip}`, tag: "sesuji-pin" });
+    } catch (e) { /* 一部スマホでは Notification コンストラクタ非対応 */ }
+  }
+
+  if (document.hidden) document.title = "🌱 せすじピン！の時間です";
+}
+
+document.getElementById("done-btn").addEventListener("click", () => {
+  document.getElementById("overlay").classList.remove("show");
+  document.title = baseTitle;
+});
+
+document.getElementById("test-btn").addEventListener("click", fireReminder);
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) document.title = baseTitle;
+});
+
+// --- 通知許可 ---
+const notifToggle = document.getElementById("notif-toggle");
+const notifHint = document.getElementById("notif-hint");
+
+if (!("Notification" in window)) {
+  notifToggle.disabled = true;
+  notifHint.textContent = "このブラウザは通知に対応していません（画面と音でお知らせします）";
+} else if (Notification.permission === "granted") {
+  notifToggle.checked = true;
+}
+
+notifToggle.addEventListener("change", async () => {
+  if (!notifToggle.checked) return;
+  if (Notification.permission !== "granted") {
+    const result = await Notification.requestPermission();
+    if (result !== "granted") {
+      notifToggle.checked = false;
+      notifHint.textContent = "通知が許可されませんでした（画面と音でお知らせします）";
+    }
+  }
+});
+
+// --- チャイム音（外部ファイル不要のやさしい2音） ---
+function playChime() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    const notes = [[523.25, 0], [659.25, 0.25]]; // ド → ミ
+    notes.forEach(([freq, delay]) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      const t = audioCtx.currentTime + delay;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.25, t + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.9);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + 1);
+    });
+  } catch (e) { /* 音が出せない環境では静かにスキップ */ }
+}
+
+// --- 画面スリープ防止 ---
+const wakeToggle = document.getElementById("wake-toggle");
+if (!("wakeLock" in navigator)) {
+  wakeToggle.disabled = true;
+  wakeToggle.closest(".toggle-row").querySelector(".hint").textContent = "このブラウザでは使えません";
+}
+
+wakeToggle.addEventListener("change", async () => {
+  if (wakeToggle.checked) {
+    await acquireWakeLock();
+  } else if (wakeLock) {
+    await wakeLock.release();
+    wakeLock = null;
+  }
+});
+
+async function acquireWakeLock() {
+  try {
+    wakeLock = await navigator.wakeLock.request("screen");
+    wakeLock.addEventListener("release", () => { wakeLock = null; });
+  } catch (e) {
+    wakeToggle.checked = false;
+  }
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && wakeToggle.checked && !wakeLock) acquireWakeLock();
+});
+</script>
+</body>
+</html>
