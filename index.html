@@ -249,6 +249,16 @@
     text-align: right;
   }
   .stretch-src a { color: var(--muted); }
+  .stretch-video {
+    margin: 4px 0 12px;
+  }
+  .stretch-video iframe {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border: 0;
+    border-radius: 10px;
+    display: block;
+  }
 
   /* リマインド画面（オーバーレイ） */
   #overlay {
@@ -448,6 +458,18 @@ const STRETCHES = [
     source: { label: "おいしな歯科コラム「耳マッサージ」より", url: "https://oishinaika.com/column/plusalpha/plusalpha11" }
   },
   {
+    emoji: "✨",
+    title: "造顔マッサージ（田中宥久子さん）",
+    video: "UjLkYSWTYHA",
+    steps: [
+      "クリームや乳液をたっぷり塗って、指がよくすべる状態にしてから始める",
+      "基本の流れ: 各パーツをほぐしたら、仕上げに「こめかみ→耳の前→首すじ→鎖骨」へ流す",
+      "細かい手の形や力加減は、上の動画と一緒に行うのがいちばんわかりやすいです"
+    ],
+    point: "すべりが悪いままこすると肌の負担になるので、クリームは必ずたっぷりと。肌が荒れているときや体調が良くないときはお休みしましょう。",
+    source: { label: "田中宥久子の造顔マッサージ（YouTube）", url: "https://youtu.be/UjLkYSWTYHA" }
+  },
+  {
     emoji: "💪",
     title: "肩甲骨はがし（肩まわし）",
     steps: [
@@ -515,6 +537,18 @@ STRETCHES.forEach(st => {
 
   const body = document.createElement("div");
   body.className = "stretch-body";
+
+  if (st.video) {
+    const wrap = document.createElement("div");
+    wrap.className = "stretch-video";
+    const iframe = document.createElement("iframe");
+    iframe.src = `https://www.youtube-nocookie.com/embed/${st.video}`;
+    iframe.loading = "lazy";
+    iframe.allowFullscreen = true;
+    iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+    wrap.appendChild(iframe);
+    body.appendChild(wrap);
+  }
 
   const ol = document.createElement("ol");
   st.steps.forEach(step => {
